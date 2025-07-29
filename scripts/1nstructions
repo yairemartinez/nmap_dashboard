@@ -1,0 +1,5 @@
+1. archive_imports.py- this script archives imported scans .xml from scans/imports to the archive directory in imports_backup   and compresses it 
+2. archive_scans.py- this script archives scans from the scans directory .xml and .txt to the archive directory and compressess it
+3. reset_scan_sessions.py- this script resets the nmap_results.db/database completely you can optionally choose what certain    tables you would like to reset 
+4. scanner.py- this script allows you populuate the nmap_results.db/database with nmap scans pasively through cron(what i used)
+

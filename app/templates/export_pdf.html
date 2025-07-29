@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Scan Report - Session {{ session_id }}</title>
+
+    <!-- 📄 PDF Print Styles -->
+    <style>
+    @page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 9.5px;
+        margin: 0;
+        padding: 0;
+    }
+
+    h2 {
+        text-align: center;
+        font-size: 14px;
+        margin: 0 0 12px 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        page-break-inside: auto;
+        margin: 0 auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    th, td {
+        border: 1px solid #888;
+        padding: 4px 5px;
+        text-align: left;
+        vertical-align: top;
+        word-break: break-word;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+    }
+
+    th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+        font-size: 10px;
+    }
+
+    td {
+        font-size: 9px;
+    }
+
+    td.script {
+        font-family: monospace;
+        font-size: 8px;
+    }
+
+    .note {
+        font-size: 9px;
+        margin-top: 1em;
+        color: #555;
+        text-align: center;
+    }
+    </style>
+</head>
+
+<body>
+
+    <!-- 🧾 Report Title -->
+    <h2>Scan Report - Session {{ session_id }} (Exported {{ datetime_now }})</h2>
+
+    <!-- 📊 Scan Results Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>IP</th>
+                <th>Hostname</th>
+                <th>MAC</th>
+                <th>Vendor</th>
+                <th>Proto</th>
+                <th>Port</th>
+                <th>State</th>
+                <th>Service</th>
+                <th>Product</th>
+                <th>Version</th>
+                <th>OS</th>
+                <th>CPE</th>
+                <th>Uptime</th>
+                <th>Last Boot</th>
+                <th>Script Summary</th>
+                <th>Device Tag</th>
+                <th>Service Tag</th>
+                <th>Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                {% for i in range(row|length) %}
+                    {% if i == 14 %}
+                        <!-- 🧠 Truncate long script output -->
+                        <td class="script">{{ row[i][:300].replace('\n', ' ') }}{% if row[i]|length > 300 %}...{% endif %}</td>
+                    {% elif i < 18 %}
+                        <!-- 📋 Normal columns -->
+                        <td>{{ row[i] }}</td>
+                    {% elif i == 18 %}
+                        <!-- ⚠️ Risk Score - highlighted -->
+                        <td><strong>{{ row[i] }}</strong></td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 📝 Footer note -->
+    <p class="note">
+        Note: Script output is truncated. View full scan results in the dashboard.
+    </p>
+
+</body>
+</html>
+

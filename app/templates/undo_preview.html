@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Restore Deleted Scan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <h2 class="mb-4">🕘 Restore Deleted Scan</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Session ID:</strong> {{ session[0] }}</p>
+            <p><strong>Timestamp:</strong> {{ session[1] }}</p>
+            <p><strong>Scan Type:</strong> {{ session[2] }}</p>
+            <p><strong>XML Path:</strong> {{ session[3] }}</p>
+            <p><strong>Log Path:</strong> {{ session[4] }}</p>
+        </div>
+    </div>
+
+    <h5>Preview of Scan Results ({{ results|length }} rows)</h5>
+    <div class="table-responsive mb-4">
+        <table class="table table-sm table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>IP</th>
+                    <th>Port</th>
+                    <th>Protocol</th>
+                    <th>Service</th>
+                    <th>State</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in results %}
+                <tr>
+                    <td>{{ row[2] }}</td>
+                    <td>{{ row[4] }}</td>
+                    <td>{{ row[3] }}</td>
+                    <td>{{ row[6] }}</td>
+                    <td>{{ row[5] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form action="{{ url_for('core.undo_delete') }}" method="post" class="d-flex gap-2">
+        <a href="{{ url_for('core.index') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">✅ Restore This Scan</button>
+    </form>
+</div>
+</body>
+</html>
+

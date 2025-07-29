@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan Comparison{% endblock %}
+
+{% block content %}
+
+<!-- 🔹 Inline CSS Styling -->
+<style>
+  body {
+    background-color: #f5f7fa;
+  }
+
+  .content-wrapper {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .legend-box {
+    background: #ffffff;
+    border-left: 4px solid #0d6efd;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .legend-box ul {
+    margin: 0;
+    padding-left: 1rem;
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: #eef5ff;
+    transition: background-color 0.3s ease;
+  }
+
+  .table th,
+  .table td {
+    white-space: nowrap;
+    font-size: 0.875rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .table td.max-100,
+  .table td.max-150,
+  .table td.max-200 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table td.max-100 { max-width: 100px; }
+  .table td.max-150 { max-width: 150px; }
+  .table td.max-200 { max-width: 200px; }
+
+  .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+</style>
+
+<!-- 🔹 Main Container -->
+<div class="container mt-4">
+  <div class="content-wrapper">
+
+    <!-- 🔸 Page Heading -->
+    <h2 class="mb-4">Scan Comparison</h2>
+
+    <!-- 🔸 Scan Summary Cards -->
+    <div class="row mb-3">
+      <!-- Old Scan Info -->
+      <div class="col-md-6">
+        <div class="card border-info">
+          <div class="card-body">
+            <h5 class="card-title text-info">Old Scan</h5>
+            <p><strong>ID:</strong> {{ old_id }}</p>
+            <p><strong>Name:</strong> {{ old_info[0] }}</p>
+            <p><strong>Timestamp:</strong> {{ old_info[1] }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Scan Info -->
+      <div class="col-md-6">
+        <div class="card border-success">
+          <div class="card-body">
+            <h5 class="card-title text-success">New Scan</h5>
+            <p><strong>ID:</strong> {{ new_id }}</p>
+            <p><strong>Name:</strong> {{ new_info[0] }}</p>
+            <p><strong>Timestamp:</strong> {{ new_info[1] }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔸 Added Hosts List -->
+    <h4 class="mt-4">🟢 Added Hosts</h4>
+    <ul>
+      {% for ip in diff.added_hosts %}
+        <li>{{ ip }}</li>
+      {% else %}
+        <li><em>No added hosts</em></li>
+      {% endfor %}
+    </ul>
+
+    <!-- 🔸 Removed Hosts List -->
+    <h4 class="mt-4">🔴 Removed Hosts</h4>
+    <ul>
+      {% for ip in diff.removed_hosts %}
+        <li>{{ ip }}</li>
+      {% else %}
+        <li><em>No removed hosts</em></li>
+      {% endfor %}
+    </ul>
+
+    <!-- 🔸 Legend Box for Port Color Coding -->
+    <div class="legend-box">
+      <strong>Legend:</strong>
+      <ul class="mb-0">
+        <li><span class="text-success">Green</span>: New value</li>
+        <li><span class="text-danger">Red</span>: Old value that changed</li>
+        <li><span class="text-muted">Gray</span>: No change</li>
+      </ul>
+    </div>
+
+    <!-- 🔸 Port and Service Changes Section -->
+    <h4 class="mt-4">⚙️ Port/Service Changes</h4>
+    {% for ip, details in diff.port_changes.items() %}
+      <div class="card my-3">
+        <!-- Host Header -->
+        <div class="card-header bg-light">
+          <strong>{{ ip }}</strong>
+          {% if details.hostname %} ({{ details.hostname }}){% endif %}
+          {% if details.mac %} — {{ details.mac }}{% endif %}
+          {% if details.tags %}
+            <span class="badge bg-secondary ms-2">{{ details.tags | join(", ") }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Comparison Tables -->
+        <div class="card-body table-responsive">
+          {% for row in details.side_by_side %}
+            <table class="table table-bordered table-sm table-hover mb-4 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Port</th>
+                  <th>State</th>
+                  <th>Service</th>
+                  <th>Version</th>
+                  <th>Product</th>
+                  <th>OS</th>
+                  <th>CPE</th>
+                  <th>Uptime</th>
+                  <th>Boot</th>
+                  <th>Script</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- 🔸 Row Showing Comparison for a Single Port -->
+                <tr>
+                  <td>{{ row.port }}</td>
+
+                  <!-- Compare Each Attribute With Change Highlighting -->
+                  <td class="max-100">
+                    {% if row.old_state != row.new_state %}
+                      <span class="text-danger">{{ row.old_state or '—' }}</span> →
+                      <span class="text-success">{{ row.new_state or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.full_old.service != row.full_new.service %}
+                      <span class="text-danger">{{ row.full_old.service or '—' }}</span> →
+                      <span class="text-success">{{ row.full_new.service or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-150">
+                    {% if row.full_old.version != row.full_new.version %}
+                      <span class="text-danger">{{ row.full_old.version or '—' }}</span> →
+                      <span class="text-success">{{ row.full_new.version or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-150">
+                    {% if row.old_product != row.new_product %}
+                      <span class="text-danger">{{ row.old_product or '—' }}</span> →
+                      <span class="text-success">{{ row.new_product or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.old_os != row.new_os %}
+                      <span class="text-danger">{{ row.old_os or '—' }}</span> →
+                      <span class="text-success">{{ row.new_os or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.old_cpe != row.new_cpe %}
+                      <span class="text-danger">{{ row.old_cpe or '—' }}</span> →
+                      <span class="text-success">{{ row.new_cpe or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.old_uptime != row.new_uptime %}
+                      <span class="text-danger">{{ row.old_uptime or '—' }}</span> →
+                      <span class="text-success">{{ row.new_uptime or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.old_last_boot != row.new_last_boot %}
+                      <span class="text-danger">{{ row.old_last_boot or '—' }}</span> →
+                      <span class="text-success">{{ row.new_last_boot or '—' }}</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="max-100">
+                    {% if row.old_script != row.new_script %}
+                      <span class="text-danger">Changed</span>
+                    {% else %}
+                      <span class="text-muted">No change</span>
+                    {% endif %}
+                  </td>
+
+                  <!-- 🔹 Full Details Link -->
+                  <td>
+                    <a class="btn btn-sm btn-outline-secondary"
+                      href="{{ url_for('compare.full_info', old_id=old_id, new_id=new_id, ip=ip, port=row.port) }}">
+                      Full
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <p><em>No port/service changes detected.</em></p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 🔹 Footer Action Buttons -->
+<div class="mt-3 d-flex flex-wrap gap-2">
+  <a href="{{ url_for('compare.compare_form') }}" class="btn btn-outline-primary btn-sm">🔍 Compare Scans</a>
+  <a href="{{ url_for('core.index') }}" class="btn btn-outline-primary btn-sm">← Back to Dashboard</a>
+</div>
+
+{% endblock %}
+

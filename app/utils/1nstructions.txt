@@ -1,0 +1,13 @@
+Instructions 
+
+custom_logging.py- Ensures logs are cleanly separated, formatted, and saved to specific log files.
+
+db_utils.py- Acts as the data access layer for my Flask application and supports querying, inserting, cleaning up, tagging, and diffing scan results.
+
+parse2_nmap.py- Parse Nmap scan results from XML files and insert detailed scan data into the database, while enriching it with risk scores, tags, and system metadata like OS, uptime, and script outputs.
+
+risk_utils.py- provides utilities to evaluate and assign risk scores to hosts discovered during an Nmap scan, based on their open ports and detected services
+
+scanner_presets.py- acts as a scan strategy library shortcut templates to run Nmap with the right flags depending on the scanning goal.
+
+tag_suggestions.py- automatic tagging engine for identifying devices and services during Nmap scans.

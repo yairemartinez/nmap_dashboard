@@ -1,0 +1,23 @@
+# --- Secrets and Environment ---
+.env
+.env.*
+
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+
+# --- Logs and Databases ---
+logs/
+*.log
+*.sqlite3
+*.db
+
+# --- Dev-only files ---
+run.py
+docker-compose.yml
+

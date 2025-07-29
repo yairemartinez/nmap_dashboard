@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan Logs - Session {{ session_id }}{% endblock %}
+
+{% block content %}
+<h2>Scan Logs for Session {{ session_id }}</h2>
+
+{% if "⚠️ Log file not found" in log_content or "⚠️ Failed to read log file" in log_content %}
+<div class="alert alert-warning" role="alert">
+    The original log file was not found. Displaying backup log content from the database.
+</div>
+{% endif %}
+
+<pre style="background:#222;color:#0f0;padding:1rem;overflow:auto;white-space:pre-wrap;">
+{{ log_content }}
+</pre>
+
+<a class="btn btn-primary mt-3" href="{{ url_for('core.index') }}">← Back to Dashboard</a>
+{% endblock %}
+

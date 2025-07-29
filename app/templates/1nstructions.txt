@@ -1,0 +1,23 @@
+INSTRUCTIONS 
+
+index.html- Home Page 
+
+layout.html- Serves as the base layout for all pages in Nmap Dashboard. Defines the shared structure, styles, and scripts that other templates can extend.
+
+scan_detail.html- Displays scan details with filters and table to make looking at nmap scans simpler
+
+export_pdf.html- Formats and displays detailed scan results into a clean, print-optimized PDF layout
+
+view_logs.html- Page serves as a log viewer for scan sessions, making it easy to review what Nmap did during the scans
+
+undo_preview.html- Prvoides a Preview to a deleted scan which you have the option to restore to the dashboard
+
+tag_inventory.html- Users can view, edit, add, or delete device and service tags associated with known IP and MAC addresses.
+
+my_network.hmtl- Allows users to manually define and manage known network devices in a structured, editable table.
+
+compare_form.html- Compare scans page old scan vs new scan
+compare.html- Scan comparison page shows only changed info
+full_info.html- In depth Scan comparison shows all info and what changed used specifically for script comparison
+
+

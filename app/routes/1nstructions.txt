@@ -1,0 +1,13 @@
+Instructions/Guide
+
+compare.py- compare routes 
+
+core.py- routes for all the features in home dashboard excluding the scan buttons
+
+my_network.py- routes for the my_network part of the app
+
+run_scan.py- routes for scan buttons feature (NOTE REPLACE TARGET SUBNETMASK TO MATCH TARGET NETWORK)
+
+scans.py- routes for all thing relating to scan details 
+
+tagging.py- routes for the tag_inventory part of the app

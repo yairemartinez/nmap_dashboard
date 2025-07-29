@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+
+{% block title %}Tag Inventory{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- 📋 Page Heading -->
+    <h1 class="mb-4">Tagged Devices & Services</h1>
+
+    <!-- 🔔 Flash Messages Display -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- 📝 Tag Table Form -->
+    <form method="POST" action="{{ url_for('tagging.tag_inventory') }}">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>MAC Address</th>
+                    <th>IP Address</th>
+                    <th>Device Tag</th>
+                    <th>Service Tag</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <!-- 📦 Existing Tagged Rows -->
+                {% for ip, mac, device, service in tagged_hosts %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <input type="text" class="form-control" name="mac_{{ loop.index }}" value="{{ mac or '' }}">
+                        <input type="hidden" name="original_mac_{{ loop.index }}" value="{{ mac or '' }}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="ip_{{ loop.index }}" value="{{ ip or '' }}">
+                        <input type="hidden" name="original_ip_{{ loop.index }}" value="{{ ip or '' }}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="device_tag_{{ loop.index }}" value="{{ device or '' }}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="service_tag_{{ loop.index }}" value="{{ service or '' }}">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="deleteTag('{{ ip }}', '{{ mac or '' }}')">🗑</button>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                <!-- ➕ New Entry Row -->
+                {% set new_index = tagged_hosts|length + 1 %}
+                <tr class="table-success">
+                    <td>{{ new_index }}</td>
+                    <td>
+                        <input type="text" class="form-control" name="mac_{{ new_index }}" placeholder="AA:BB:CC:DD:EE:FF">
+                        <input type="hidden" name="original_mac_{{ new_index }}" value="">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="ip_{{ new_index }}" placeholder="192.168.1.100">
+                        <input type="hidden" name="original_ip_{{ new_index }}" value="">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="device_tag_{{ new_index }}" placeholder="e.g. Linux Laptop">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="service_tag_{{ new_index }}" placeholder="e.g. User">
+                    </td>
+                    <td>
+                        <span class="text-muted small">New</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 🧾 Total Rows and Save Button -->
+        <input type="hidden" name="total_rows" value="{{ new_index }}">
+
+        <button type="submit" class="btn btn-success">💾 Save All Changes</button>
+        <a href="{{ url_for('core.index') }}" class="btn btn-secondary ms-2">← Back to Dashboard</a>
+    </form>
+
+    <!-- 🗑 Hidden Form for Tag Deletion -->
+    <form id="deleteForm" method="POST" action="{{ url_for('tagging.delete_tag') }}" style="display: none;">
+        <input type="hidden" name="mac" id="deleteMacInput">
+        <input type="hidden" name="ip" id="deleteIpInput">
+    </form>
+
+    <!-- 🧠 Delete Confirmation Script -->
+    <script>
+      function deleteTag(ip, mac) {
+        console.log("Submitting delete for:", ip, mac); // Optional debug
+        if (confirm(`Are you sure you want to delete tags for ${ip} / ${mac}?`)) {
+          document.getElementById('deleteIpInput').value = ip;
+          document.getElementById('deleteMacInput').value = mac;
+          document.getElementById('deleteForm').submit();
+        }
+      }
+    </script>
+
+</div>
+{% endblock %}
+

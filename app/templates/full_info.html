@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block title %}Full Port Info: {{ ip }}:{{ port }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="content-wrapper">
+
+    <!-- 🧩 Page Header -->
+    <h3>Full Info for <strong>{{ ip }}:{{ port }}</strong></h3>
+
+    <!-- 🗂️ Legend for Diff Colors -->
+    <div class="alert alert-light border d-flex align-items-center gap-4 py-2 small">
+      <div><span class="text-danger fw-bold">Red</span>: Changed or removed from old scan</div>
+      <div><span class="text-success fw-bold">Green</span>: Changed or added in new scan</div>
+      <div><span class="text-muted">—</span>: No data or unchanged</div>
+    </div>
+
+    <!-- 🧮 Changed Fields Summary -->
+    {% set changed_fields = [] %}
+    {% for field in ['state', 'service', 'version', 'product', 'os', 'cpe', 'uptime', 'last_boot', 'script'] %}
+      {% if old_info[field] != new_info[field] %}
+        {% set _ = changed_fields.append(field.replace('_', ' ').title()) %}
+      {% endif %}
+    {% endfor %}
+    {% if changed_fields %}
+      <div class="alert alert-warning small">
+        <strong>Changed fields:</strong> {{ changed_fields | join(', ') }}
+      </div>
+    {% endif %}
+
+    <div class="row mt-3">
+      <!-- 📦 OLD SCAN DATA COLUMN -->
+      <div class="col-md-6">
+        <h5>💙 Old Scan</h5>
+        <ul class="list-unstyled small">
+          {% for field in ['state', 'service', 'version', 'product', 'os', 'cpe', 'uptime', 'last_boot'] %}
+          <li><strong>{{ field.replace('_', ' ').title() }}:</strong>
+            <span class="{% if old_info[field] != new_info[field] %}text-danger{% endif %}">
+              {{ old_info[field] or '—' }}
+            </span>
+          </li>
+          {% endfor %}
+
+          <!-- 🧾 OLD Script Block Comparison -->
+          <li><strong>Script:</strong><br>
+            {% if old_info.script %}
+              <pre class="p-2 bg-light rounded border small {% if old_info.script != new_info.script %}border-danger{% endif %}" style="white-space: pre-wrap; word-break: break-word;">
+{% set old_lines = old_info.script.split('\n') %}
+{% set new_lines = new_info.script.split('\n') if new_info.script else [] %}
+{% for line in old_lines %}
+<span class="{% if line not in new_lines %}text-danger{% endif %}">{{ line }}</span>
+{% endfor %}
+              </pre>
+            {% else %}
+              <p class="text-muted">—</p>
+            {% endif %}
+          </li>
+        </ul>
+      </div>
+
+      <!-- 📥 NEW SCAN DATA COLUMN -->
+      <div class="col-md-6">
+        <h5>🔜 New Scan</h5>
+        <ul class="list-unstyled small">
+          {% for field in ['state', 'service', 'version', 'product', 'os', 'cpe', 'uptime', 'last_boot'] %}
+          <li><strong>{{ field.replace('_', ' ').title() }}:</strong>
+            <span class="{% if old_info[field] != new_info[field] %}text-success{% endif %}">
+              {{ new_info[field] or '—' }}
+            </span>
+          </li>
+          {% endfor %}
+
+          <!-- 🧾 NEW Script Block Comparison -->
+          <li><strong>Script:</strong><br>
+            {% if new_info.script %}
+              <pre class="p-2 bg-light rounded border small {% if old_info.script != new_info.script %}border-success{% endif %}" style="white-space: pre-wrap; word-break: break-word;">
+{% set old_lines = old_info.script.split('\n') if old_info.script else [] %}
+{% set new_lines = new_info.script.split('\n') %}
+{% for line in new_lines %}
+<span class="{% if line not in old_lines %}text-success{% endif %}">{{ line }}</span>
+{% endfor %}
+              </pre>
+            {% else %}
+              <p class="text-muted">—</p>
+            {% endif %}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 🔙 Back to Comparison Button -->
+    <div class="mt-4">
+      <a href="{{ url_for('compare.compare_view') }}?old_id={{ old_id }}&new_id={{ new_id }}" class="btn btn-outline-secondary">
+        ⬅ Back to Comparison
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

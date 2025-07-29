@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scan Details - Session {{ session_id }}</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  .legend-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    border-radius: 4px;
+  }
+  .table-hover tbody tr:hover {
+    background-color: #f9f9f9;
+  }
+  .table-sm td, .table-sm th {
+    font-size: 0.75rem;
+  }
+  .scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    cursor: default;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-wrapper.scrollable {
+    cursor: grab;
+    cursor: -webkit-grab;
+  }
+  .scroll-wrapper.dragging {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+  }
+  .scroll-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+  .scroll-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  .scroll-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+</style>
+</head>
+<body class="bg-light">
+<div class="container py-5">
+  <h1 class="mb-3">🔍 Scan Details for Session <code>#{{ session_id }}</code></h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="{{ url_for('core.index') }}" class="btn btn-secondary">← Back to All Scans</a>
+    <a href="{{ url_for('scans.export_pdf', session_id=session_id) }}" class="btn btn-outline-success" target="_blank">⬇ Export PDF</a>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    {% for card in [
+      {'title': 'Hosts Scanned', 'value': summary.total_hosts, 'border': 'primary'},
+      {'title': 'Total Ports', 'value': summary.total_ports, 'border': 'success'},
+      {'title': 'Open Ports', 'value': summary.open_ports, 'border': 'danger'},
+      {'title': 'Unique Services', 'value': summary.unique_services, 'border': 'info'}
+    ] %}
+    <div class="col-md-3">
+      <div class="card border-{{ card.border }} shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title">{{ card.title }}</h6>
+          <p class="h5">{{ card.value }}</p>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if highest_ip %}
+  <div class="row mb-4">
+    <div class="col">
+      <div class="card border-warning shadow-sm bg-light">
+        <div class="card-body">
+          <h6 class="card-title text-warning">⚠ Highest Risk Host</h6>
+          <p class="h5 mb-1"><code>{{ highest_ip }}</code></p>
+          <p class="mb-0">Risk Score: <strong>{{ highest_score }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Risk Legend -->
+  <div class="mb-4">
+    <h6>Risk Level Legend:</h6>
+    <div>
+      <span class="legend-box bg-success"></span> Low (0–5)
+      <span class="legend-box bg-warning mx-3"></span> Medium (6–11)
+      <span class="legend-box bg-danger"></span> High (12+)
+    </div>
+  </div>
+
+  <!-- Filter Summary -->
+  {% if filters.ip or filters.port or filters.service or filters.device_tag or filters.service_tag %}
+  <div class="mb-3">
+    <strong>Active Filters:</strong>
+    {% for key, label in [('ip', 'IP'), ('port', 'Port'), ('service', 'Service'), ('device_tag', 'Device'), ('service_tag', 'Service')] %}
+      {% if filters[key] %}<span class="badge bg-primary me-1">{{ label }}: {{ filters[key] }}</span>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Filter Form -->
+  <form method="get" class="row g-3 mb-4 align-items-end" id="filter-form">
+    <div class="col-md-2">
+      <label for="ip" class="form-label">IP</label>
+      <input type="text" name="ip" id="ip" class="form-control" placeholder="-- None --" value="{{ filters.ip or '' }}" />
+    </div>
+    <div class="col-md-1">
+      <label for="port" class="form-label">Port</label>
+      <input type="text" name="port" id="port" class="form-control" placeholder="-- None --" value="{{ filters.port or '' }}" />
+    </div>
+    <div class="col-md-2">
+      <label for="service" class="form-label">Service</label>
+      <input type="text" name="service" id="service" class="form-control" placeholder="-- None --" value="{{ filters.service or '' }}" />
+    </div>
+    <div class="col-md-3">
+      <label for="device_tag" class="form-label">Device Tag</label>
+      <select name="device_tag" id="device_tag" class="form-select">
+        <option value="">-- None --</option>
+        {% for tag in all_device_tags %}
+          <option value="{{ tag }}" {% if filters.device_tag == tag %}selected{% endif %}>{{ tag }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="service_tag" class="form-label">Service Tag</label>
+      <select name="service_tag" id="service_tag" class="form-select">
+        <option value="">-- None --</option>
+        {% for tag in all_service_tags %}
+          <option value="{{ tag }}" {% if filters.service_tag == tag %}selected{% endif %}>{{ tag }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-1 d-grid gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <button type="button" class="btn btn-outline-secondary" id="clear-filters">Clear</button>
+    </div>
+  </form>
+
+  <!-- Charts -->
+  <div class="row mb-4">
+    <div class="col-md-6"><canvas id="topPortsChart"></canvas></div>
+    <div class="col-md-6"><canvas id="topServicesChart"></canvas></div>
+  </div>
+
+  <!-- Results Table wrapped in drag-scroll container -->
+  <div class="scroll-wrapper">
+    <table class="table table-bordered table-hover table-sm align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>IP</th><th>Protocol</th><th>Port</th><th>State</th><th>Service</th><th>Product</th><th>Version</th>
+          <th>OS</th><th>Script</th><th>Hostname</th><th>MAC Address</th><th>Vendor</th><th>Uptime</th>
+          <th>Last Boot</th><th>CPE</th><th>Risk</th><th>Tags</th>
+        </tr>
+      </thead>
+      <tbody>
+  {% for row in details %}
+  {% set ip = row[0] %}
+  {% set score = row[15] %}
+  {% set reasons = risk_reasons_by_host.get(ip, []) %}
+  {% set tag = tags.get(ip, {}) %}
+  {% set mac_clean = row[10]|upper|replace(":", "")|replace("-", "") %}
+  {% set status = trusted_status.get((ip, mac_clean)) %}
+  {% set status_icon = {
+    'safe': 'Safe🟢',
+    'temporary': 'Guest🟡',
+    'unknown': 'Stranger🔴'
+  }.get(status, '') %}
+  {% set row_class = "table-success" %}
+  {% if score >= 12 %}
+    {% set row_class = "table-danger" %}
+  {% elif score >= 6 %}
+    {% set row_class = "table-warning" %}
+  {% endif %}
+    <tr class="{{ row_class }}" title="Risk factors: {{ reasons | join(', ') }} | Status: {{ status or 'unknown' }}">
+      {% for i in range(15) %}
+        {% if i == 0 %}
+          <td>{{ row[0] }} {% if status_icon %}{{ status_icon }}{% endif %}</td>
+        {% else %}
+          <td>{{ row[i] }}</td>
+        {% endif %}
+      {% endfor %}
+      <td>
+        <strong>{{ score }}</strong>
+        <span class="ms-1 badge
+          {% if score >= 12 %} bg-danger
+          {% elif score >= 6 %} bg-warning text-dark
+          {% else %} bg-success
+          {% endif %}
+        ">
+          {% if score >= 12 %}High{% elif score >= 6 %}Medium{% else %}Low{% endif %}
+        </span>
+      </td>
+      <td>
+        <form method="POST" action="{{ url_for('scans.set_tags_route', session_id=session_id) }}" class="d-flex flex-column gap-1 mb-2">
+          <input type="hidden" name="ip" value="{{ ip }}" />
+
+          <input type="text" name="device_tag" value="{{ tag.get('global', {}).get('device', '') }}" placeholder="Device Tag" class="form-control form-control-sm" />
+          {% if tag.get('suggested', {}).get('device') and tag.get('suggested', {}).get('device') != tag.get('global', {}).get('device') %}
+            <small class="text-muted ms-1">Suggested: {{ tag.suggested.device }}</small>
+          {% endif %}
+
+          <input type="text" name="service_tag" value="{{ tag.get('global', {}).get('service', '') }}" placeholder="Service Tag" class="form-control form-control-sm" />
+          {% if tag.get('suggested', {}).get('service') and tag.get('suggested', {}).get('service') != tag.get('global', {}).get('service') %}
+            <small class="text-muted ms-1">Suggested: {{ tag.suggested.service }}</small>
+          {% endif %}
+
+          <button type="submit" class="btn btn-sm btn-primary mt-1">Save</button>
+        </form>
+
+        {% if (tag.get('suggested', {}).get('device') and tag.get('suggested', {}).get('device') != tag.get('global', {}).get('device')) or
+              (tag.get('suggested', {}).get('service') and tag.get('suggested', {}).get('service') != tag.get('global', {}).get('service')) %}
+          <form method="POST" action="{{ url_for('scans.apply_suggested_tags', session_id=session_id) }}">
+            <input type="hidden" name="ip" value="{{ ip }}" />
+            <input type="hidden" name="suggested_device" value="{{ tag.suggested.device or '' }}" />
+            <input type="hidden" name="suggested_service" value="{{ tag.suggested.service or '' }}" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Copy Suggested</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr>
+      <td colspan="17" class="text-center text-muted">No results found for this filter.</td>
+    </tr>
+  {% endfor %}
+</tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (() => {
+    // Clear filters button
+    const clearBtn = document.getElementById("clear-filters");
+    const inputs = ["ip", "port", "service"];
+    const selects = ["device_tag", "service_tag"];
+
+    clearBtn.addEventListener("click", () => {
+      inputs.forEach(id => document.getElementById(id).value = "");
+      selects.forEach(id => document.getElementById(id).selectedIndex = 0);
+    });
+
+    // Drag-to-scroll logic for scroll-wrapper
+    const scrollWrapper = document.querySelector(".scroll-wrapper");
+    let isDragging = false, startX = 0, scrollLeft = 0;
+
+    const updateScrollableState = () => {
+      if (scrollWrapper.scrollWidth > scrollWrapper.clientWidth) {
+        scrollWrapper.classList.add("scrollable");
+      } else {
+        scrollWrapper.classList.remove("scrollable");
+      }
+    };
+
+    updateScrollableState();
+    window.addEventListener("resize", updateScrollableState);
+
+    scrollWrapper.addEventListener("mousedown", e => {
+      if (!scrollWrapper.classList.contains("scrollable")) return;
+      isDragging = true;
+      scrollWrapper.classList.add("dragging");
+      startX = e.pageX - scrollWrapper.offsetLeft;
+      scrollLeft = scrollWrapper.scrollLeft;
+    });
+
+    const stopDrag = () => {
+      isDragging = false;
+      scrollWrapper.classList.remove("dragging");
+    };
+
+    scrollWrapper.addEventListener("mouseleave", stopDrag);
+    scrollWrapper.addEventListener("mouseup", stopDrag);
+
+    scrollWrapper.addEventListener("mousemove", e => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - scrollWrapper.offsetLeft;
+      const walk = (x - startX) * 1.5; // scroll speed multiplier
+      scrollWrapper.scrollLeft = scrollLeft - walk;
+    });
+
+    // Chart setup
+    const portLabels = {{ port_labels | tojson }};
+    const portCounts = {{ port_counts | tojson }};
+    const serviceLabels = {{ service_labels | tojson }};
+    const serviceCounts = {{ service_counts | tojson }};
+
+    const createBarChart = (ctx, labels, data, title, bgColor) => {
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: title, data, backgroundColor: bgColor }]
+        },
+        options: {
+          responsive: true,
+          plugins: { title: { display: true, text: title } },
+        }
+      });
+    };
+
+    createBarChart(document.getElementById("topPortsChart"), portLabels, portCounts, "Most Common Ports", "rgba(54, 162, 235, 0.6)");
+    createBarChart(document.getElementById("topServicesChart"), serviceLabels, serviceCounts, "Most Common Services", "rgba(75, 192, 192, 0.6)");
+  })();
+</script>
+</body>
+</html>
+

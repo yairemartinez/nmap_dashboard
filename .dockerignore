@@ -1,0 +1,29 @@
+# ----------------------------------------
+# Python artifacts
+# ----------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+
+# ----------------------------------------
+# Virtual environments
+# ----------------------------------------
+.venv/
+env/
+venv/
+
+# ----------------------------------------
+# Logs and local database (don't bake into image)
+# ----------------------------------------
+logs/
+archive/
+*.log
+*.sqlite3
+nmap_results.db  # 🚨 Prevent database overwrite!
+
+# ----------------------------------------
+# Dev/host-only files
+# ----------------------------------------
+run.py
+docker-compose.yml
+

@@ -1,0 +1,233 @@
+{% extends "layout.html" %}
+
+{% block title %}Nmap Scan Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Navigation Buttons -->
+<div class="mb-3 d-flex gap-2">
+    <a href="{{ url_for('tagging.tag_inventory') }}" class="btn btn-secondary">📝 Tag Inventory</a>
+    <a href="{{ url_for('my_network.my_network') }}" class="btn btn-secondary">🏗️ Build My Network</a>
+</div>
+
+<!-- Scan Filtering Section -->
+<form method="get" action="{{ url_for('core.index') }}" class="row g-3 mb-4 align-items-center">
+    <div class="col-auto">
+        <label for="filter_scan_type" class="form-label mb-0">Scan type:</label>
+        <select id="filter_scan_type" name="scan_type" class="form-select">
+            <option value="" {% if not request.args.get('scan_type') %}selected{% endif %}>All</option>
+            {% set short_labels = ['Inventory', 'Security', 'System', 'Penetration', 'Compliance', 'custom'] %}
+            {% for label in short_labels %}
+            <option value="{{ label }}" {% if request.args.get('scan_type') == label %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="filter_timestamp" class="form-label mb-0">Date:</label>
+        <input id="filter_timestamp" type="text" name="timestamp" class="form-control flatpickr" placeholder="Select date" value="{{ request.args.get('timestamp', '') }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </div>
+</form>
+
+<!-- Upload XML Form -->
+<form action="{{ url_for('core.upload_xml') }}" method="post" enctype="multipart/form-data" class="mb-4 d-flex align-items-center gap-2">
+    <label for="xmlfile" class="form-label mb-0">Import Scan (XML):</label>
+    <input id="xmlfile" type="file" name="xmlfile" accept=".xml" required class="form-control form-control-sm w-auto">
+    <button type="submit" class="btn btn-success btn-sm">Upload</button>
+</form>
+
+<!-- Scan Category Buttons -->
+<form id="scanForm" class="mb-4">
+    <div class="d-grid gap-2">
+        {% for name, details in scan_categories.items() %}
+        <button name="category" value="{{ name }}" class="btn btn-outline-primary" type="submit">
+            <strong>{{ name }}</strong> - {{ details.description }}
+        </button>
+        {% endfor %}
+    </div>
+</form>
+
+<!-- Fallback Scan Progress Bar (non-modal) -->
+<div class="progress mb-2" style="height: 25px; display: none;" id="scanProgressContainer">
+    <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" id="scanProgressBar" style="width: 0%">0%</div>
+</div>
+
+<!-- Timer Display (non-modal) -->
+<div id="scanTimers" class="mb-4" style="display: none;">
+    <span class="text-muted">Elapsed: <strong id="scanDuration">0s</strong></span> |
+    <span class="text-muted">ETA: <strong id="scanETA">calculating...</strong></span>
+</div>
+
+<!-- Scan Sessions Table -->
+{% if scans %}
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>ID</th>
+            <th>Timestamp</th>
+            <th>Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for scan in scans %}
+        <tr>
+            <td>{{ scan[0] }}</td>
+            <td>{{ scan[1] }}</td>
+            <td>{{ scan[2] }}</td>
+            <td>
+                <!-- View Scan -->
+                <a href="{{ url_for('scans.scan_detail', session_id=scan[0]) }}" class="btn btn-sm btn-primary me-1 mb-1">View</a>
+
+                <!-- Delete Scan -->
+                <form action="{{ url_for('core.delete_scan', session_id=scan[0]) }}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete scan {{ scan[0] }}?');">
+                    <button type="submit" class="btn btn-sm btn-danger me-1 mb-1">Delete</button>
+                </form>
+
+                <!-- Export to PDF -->
+                <a href="{{ url_for('scans.export_pdf', session_id=scan[0]) }}" class="btn btn-sm btn-secondary me-1 mb-1">Export</a>
+
+                <!-- View Logs -->
+                <a href="{{ url_for('scans.view_logs', session_id=scan[0]) }}" class="btn btn-sm btn-warning mb-1">Logs</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Footer Actions -->
+<div class="mt-3 d-flex flex-wrap gap-2">
+    <form action="{{ url_for('core.undo_preview') }}" method="get" style="display:inline;">
+        <button type="submit" class="btn btn-outline-warning btn-sm">⤺ Preview Restore</button>
+    </form>
+
+    <form action="{{ url_for('core.cleanup_orphans') }}" method="post" style="display:inline;">
+        <button type="submit" class="btn btn-outline-danger btn-sm">🧹 Cleanup Orphans</button>
+    </form>
+
+    <a href="{{ url_for('compare.compare_form') }}" class="btn btn-outline-primary btn-sm">🔍 Compare Scans</a>
+</div>
+{% else %}
+<p>No scan sessions found.</p>
+{% endif %}
+
+<!-- Modal for Scan Progress -->
+<div class="modal fade" id="scanProgressModal" tabindex="-1" aria-labelledby="scanProgressLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="scanProgressLabel">Scan in Progress</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Please wait while the scan runs…</p>
+        <div class="progress mb-2">
+          <div id="modalScanProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+               role="progressbar" style="width: 0%">0%</div>
+        </div>
+        <div id="scanTimers" class="text-muted" style="display: none;">
+            Elapsed: <strong id="scanDuration">0s</strong> |
+            ETA: <strong id="scanETA">calculating…</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Running Scans and Updating Progress -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll("#scanForm button");
+    const modal = new bootstrap.Modal(document.getElementById("scanProgressModal"));
+    const modalBar = document.getElementById("modalScanProgressBar");
+    const fallbackBar = document.getElementById("scanProgressBar");
+    const fallbackContainer = document.getElementById("scanProgressContainer");
+    const timerBox = document.getElementById("scanTimers");
+    const durationText = document.getElementById("scanDuration");
+    const etaText = document.getElementById("scanETA");
+
+    buttons.forEach(button => {
+        button.addEventListener("click", function (e) {
+            e.preventDefault();
+            const category = this.value;
+
+            modalBar.style.width = "0%";
+            modalBar.textContent = "0%";
+            fallbackBar.style.width = "0%";
+            fallbackBar.textContent = "0%";
+            if (timerBox) {
+                timerBox.style.display = "block";
+                durationText.textContent = "0s";
+                etaText.textContent = "calculating...";
+            }
+
+            let startTime = Date.now();
+            let timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                durationText.textContent = formatTime(elapsed);
+            }, 1000);
+
+            if (modal) modal.show();
+            else fallbackContainer.style.display = "block";
+
+            fetch("{{ url_for('run_scan.run_scan') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: new URLSearchParams({ category: category })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.log) {
+                    const eventSource = new EventSource(`/scan_progress/${data.log}`);
+                    eventSource.onmessage = function (e) {
+                        const percent = parseInt(e.data);
+                        modalBar.style.width = percent + "%";
+                        modalBar.textContent = percent + "%";
+                        fallbackBar.style.width = percent + "%";
+                        fallbackBar.textContent = percent + "%";
+
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        if (percent > 0 && percent < 100) {
+                            const totalEstimate = elapsed / (percent / 100);
+                            const remaining = Math.max(0, totalEstimate - elapsed);
+                            etaText.textContent = formatTime(Math.round(remaining));
+                        } else if (percent >= 100) {
+                            clearInterval(timerInterval);
+                            etaText.textContent = "0s";
+                            eventSource.close();
+                            setTimeout(() => {
+                                if (modal) modal.hide();
+                                window.location.reload();
+                            }, 2000);
+                        }
+                    };
+                } else {
+                    alert("⚠️ Scan could not be started.");
+                    if (modal) modal.hide();
+                    fallbackContainer.style.display = "none";
+                    clearInterval(timerInterval);
+                }
+            })
+            .catch(err => {
+                alert("❌ Failed to start scan.");
+                console.error(err);
+                if (modal) modal.hide();
+                fallbackContainer.style.display = "none";
+                clearInterval(timerInterval);
+            });
+        });
+    });
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    }
+});
+</script>
+{% endblock %}
+

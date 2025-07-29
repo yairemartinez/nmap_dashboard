@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- 🔹 Page Header -->
+<h2 class="mb-4">🧪 Compare Scans</h2>
+
+<!-- 🔹 Comparison Form -->
+<form action="{{ url_for('compare.compare_view') }}" method="get" class="mb-4">
+
+  <!-- 🔹 Scan Selection Row -->
+  <div class="row mb-3">
+    <!-- 🔸 Old Scan Dropdown -->
+    <div class="col-md-6">
+      <label for="old_id" class="form-label">Old Scan</label>
+      <select id="old_id" name="old_id" class="form-select" required>
+        {% for scan in scans %}
+        <option value="{{ scan[0] }}">{{ scan[1] }} — {{ scan[2] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- 🔸 New Scan Dropdown -->
+    <div class="col-md-6">
+      <label for="new_id" class="form-label">New Scan</label>
+      <select id="new_id" name="new_id" class="form-select" required>
+        {% for scan in scans %}
+        <option value="{{ scan[0] }}">{{ scan[1] }} — {{ scan[2] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- 🔹 Submit & Back Buttons -->
+  <div class="d-flex align-items-center">
+    <button type="submit" class="btn btn-primary me-2">🔍 Compare</button>
+    <a href="{{ url_for('core.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+  </div>
+
+  <!-- 🔹 Client-Side Validation Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.querySelector("form");
+      const oldSelect = document.getElementById("old_id");
+      const newSelect = document.getElementById("new_id");
+
+      form.addEventListener("submit", function (e) {
+        if (oldSelect.value === newSelect.value) {
+          alert("Please select two different scans to compare.");
+          e.preventDefault(); // stop form submission
+        }
+      });
+    });
+  </script>
+</form>
+{% endblock %}
+

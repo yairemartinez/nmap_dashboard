@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+
+{% block title %}Build My Network{% endblock %}
+
+{% block content %}
+
+<!-- 🎨 Inline Styles for Row Status Coloring -->
+<style>
+    .status-green td { background-color: #d4edda !important; transition: background-color 0.6s ease; }
+    .status-yellow td { background-color: #fff3cd !important; transition: background-color 0.6s ease; }
+    .status-red td { background-color: #f8d7da !important; transition: background-color 0.6s ease; }
+
+    .form-control:focus { box-shadow: none; }
+</style>
+
+<!-- 🧱 Page Container -->
+<div class="container py-4">
+    <h2 class="mb-4">🏗️ Build My Network</h2>
+
+    <!-- 📝 Network Device Form -->
+    <form method="POST" id="network-form">
+        <input type="hidden" name="total_rows" id="total_rows" value="{{ devices|length }}">
+
+        <!-- 📋 Device Table -->
+        <table class="table table-bordered table-striped align-middle text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Device Name</th>
+                    <th>IP Address</th>
+                    <th>MAC Address</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="device-table-body">
+                {% for row in devices %}
+                {% set row_class = 'status-green' if row.status == 'safe' else 'status-yellow' if row.status == 'temporary' else 'status-red' %}
+                <tr class="{{ row_class }}">
+                    <td>{{ loop.index }}</td>
+                    <td><input type="text" class="form-control" name="device_name_{{ loop.index }}" value="{{ row.device_name }}"></td>
+                    <td><input type="text" class="form-control" name="ip_{{ loop.index }}" value="{{ row.ip }}"></td>
+                    <td><input type="text" class="form-control" name="mac_{{ loop.index }}" value="{{ row.mac_addr }}"></td>
+                    <td>
+                        <select name="status_{{ loop.index }}" class="form-select status-selector" onchange="updateRowColor(this)">
+                            <option value="safe" {% if row.status == 'safe' %}selected{% endif %}>🟢 Safe</option>
+                            <option value="temporary" {% if row.status == 'temporary' %}selected{% endif %}>🟡 Guest</option>
+                            <option value="unknown" {% if row.status == 'unknown' %}selected{% endif %}>🔴 Stranger</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="hidden" name="original_mac_{{ loop.index }}" value="{{ row.mac_addr }}">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteRowFromDB(this, '{{ row.mac_addr }}')">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- ✅ Action Buttons -->
+        <div class="d-flex justify-content-between mt-3">
+            <button type="button" class="btn btn-outline-primary" onclick="addRow()">➕ Add Device</button>
+            <button type="submit" class="btn btn-success">💾 Save Network</button>
+        </div>
+    </form>
+</div>
+
+<!-- 🧠 Script Section -->
+<script>
+    let rowCount = {{ devices|length }};
+
+    // ➕ Add New Row
+    function addRow() {
+        rowCount += 1;
+        const tableBody = document.getElementById("device-table-body");
+        const row = document.createElement("tr");
+        row.classList.add("status-green");
+
+        row.innerHTML = `
+            <td>${rowCount}</td>
+            <td><input type="text" class="form-control" name="device_name_${rowCount}"></td>
+            <td><input type="text" class="form-control" name="ip_${rowCount}"></td>
+            <td><input type="text" class="form-control" name="mac_${rowCount}"></td>
+            <td>
+                <select name="status_${rowCount}" class="form-select status-selector" onchange="updateRowColor(this)">
+                    <option value="safe" selected>🟢 Safe</option>
+                    <option value="temporary">🟡 Guest</option>
+                    <option value="unknown">🔴 Stranger</option>
+                </select>
+            </td>
+            <td>
+                <input type="hidden" name="original_mac_${rowCount}" value="">
+                <button type="button" class="btn btn-sm btn-danger" onclick="deleteRow(this)">🗑️</button>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+        document.getElementById("total_rows").value = rowCount;
+    }
+
+    // ❌ Remove Row (Client-side Only)
+    function deleteRow(button) {
+        const row = button.closest("tr");
+        row.remove();
+    }
+
+    // 🎨 Update Row Color Based on Status
+    function updateRowColor(select) {
+        const row = select.closest("tr");
+        row.className = ""; // Clear all classes
+        void row.offsetWidth; // Force reflow
+        if (select.value === "safe") row.classList.add("status-green");
+        else if (select.value === "temporary") row.classList.add("status-yellow");
+        else if (select.value === "unknown") row.classList.add("status-red");
+    }
+
+    // ❌ Delete Row from DB (Server Request)
+    function deleteRowFromDB(button, macAddr) {
+        const row = button.closest("tr");
+        const rowIndex = [...row.parentElement.children].indexOf(row);
+        const ip = row.querySelector("input[name^='ip_']").value;
+        const deviceName = row.querySelector("input[name^='device_name_']").value;
+
+        if (!confirm("Are you sure you want to delete this device?")) return;
+
+        const postData = new URLSearchParams();
+        if (macAddr) {
+            postData.append("mac_addr", macAddr);
+        }
+        postData.append("ip", ip);
+        postData.append("device_name", deviceName);
+        postData.append("row_index", rowIndex);
+
+        fetch("{{ url_for('my_network.delete_device') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: postData,
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.ok) {
+                row.remove();  // Always remove the row
+            } else {
+                alert("❌ Failed to delete device.");
+            }
+        })
+        .catch(error => {
+            console.error("Delete error:", error);
+            alert("❌ Error deleting device.");
+        });
+    }
+</script>
+
+{% endblock %}
+
