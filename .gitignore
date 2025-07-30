@@ -11,13 +11,18 @@ __pycache__/
 venv/
 env/
 
-# --- Logs and Databases ---
-logs/
-*.log
+# --- Exceptions to allow empty DB and log files ---
+!nmap_results.db
+!logs/
+!logs/nmap_dashboard.log
 *.sqlite3
-*.db
 
 # --- Dev-only files ---
 run.py
 docker-compose.yml
 
+# Don't ignore .keep placeholder files
+!scans/.keep
+!scans/imports/.keep
+!archive/.keep
+!archive/imports_backup/.keep
