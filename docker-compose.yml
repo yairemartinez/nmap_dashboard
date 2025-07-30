@@ -1,0 +1,19 @@
+# WARNING: Host networking gives the container full network access. Only use in trusted environments.
+services:
+  nmap-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nmap-app
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./scans:/app/scans
+      - ./logs:/app/logs
+      - ./nmap_results.db:/app/nmap_results.db
+      - /etc/hosts:/etc/hosts:ro
+      - /etc/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    env_file: .env
