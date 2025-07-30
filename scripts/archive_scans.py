@@ -1,4 +1,3 @@
-yair@Ubuntu:~/nmap_dashboard_copy/scripts$ cat archive_scans.py 
 # archive_scans.py
 
 import os
