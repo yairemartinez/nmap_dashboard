@@ -1,3 +1,7 @@
+## 📽️ Live Demo
+
+![Nmap Dashboard Demo](https://raw.githubusercontent.com/yairemartinez/nmap_dashboard/refs/heads/main/dashboard.gif)
+
 ⚠️ This tool is intended for private/local use only. Do not expose the app or container to the public internet.
 ⚠️ This app requires Docker to be run with sudo:
 
