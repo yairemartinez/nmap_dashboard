@@ -1,0 +1,28 @@
+THESE LOG FILES ARE POPULATED THROUGH THE USE OF SCRIPTS directory
+imports_archive.log
+archive.log
+
+dashboard.err for all WARNING+ logs (stderr-like)
+
+Logs for Exports done
+ export_log
+
+Logs for activiy in mynetwork.log
+ mynetwork.log
+
+Logs for everything in the app  
+ nmap_dashboard.log
+
+Logs for everything parsed
+ parser.log
+
+# logs/nmap_dashboard.log
+This file is generated and used at runtime for main logging.
+
+- It is included here to show the expected log file name and location.
+- It may be owned by root if the Docker container or app is run with `sudo`.
+- This is expected behavior due to the nature of Nmap scans.
+- Contents are cleared before commit; no sensitive data is included.
+
+If running into permission errors, ensure you're using Docker with `sudo` as required.
+
