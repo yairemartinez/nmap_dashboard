@@ -1,6 +1,7 @@
 # --- Secrets and Environment ---
 .env
 .env.*
+!.env.example
 
 # --- Python bytecode ---
 __pycache__/
@@ -16,10 +17,6 @@ env/
 !logs/
 !logs/nmap_dashboard.log
 *.sqlite3
-
-# --- Dev-only files ---
-run.py
-docker-compose.yml
 
 # Don't ignore .keep placeholder files
 !scans/.keep
