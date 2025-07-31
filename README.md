@@ -1,6 +1,9 @@
 ## 📽️ Live Demo
 ![Dashboard Demo](assets/dashboard.gif)
 
+
+👉 Want to know what I learned? Check out [LESSONS.md](./LESSONS.md)
+
 ⚠️ Security Warning
 This tool is for **private use on trusted networks** only.
 Do **not** expose the container to the public internet or run on unknown devices.
